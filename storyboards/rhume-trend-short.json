@@ -2,6 +2,7 @@
   "slug": "rhume-trend-short",
   "title": "Le rhume en 60 secondes — version trend",
   "lang": "fr",
+  "revision": 2,
   "music": { "name": "trend-dancepop-house-2026-11", "bpm": 120 },
   "scenes": [
     {

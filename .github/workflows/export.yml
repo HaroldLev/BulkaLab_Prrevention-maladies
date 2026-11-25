@@ -76,4 +76,4 @@ jobs:
               done
             fi
           done
-          gh "${@}"
+          gh "${ARGS[@]}"
