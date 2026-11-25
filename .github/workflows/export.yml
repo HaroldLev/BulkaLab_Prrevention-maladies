@@ -73,5 +73,13 @@ jobs:
           for SLUG in $SLUGS; do
             cp "out/$SLUG.mp4" "$SLUG.mp4"
             ARGS+=("$SLUG.mp4")
+            # images allégées pour le canvas React (générées par generate.py)
+            if [ -d "out/$SLUG/canvas-images" ]; then
+              for IMG in out/$SLUG/canvas-images/*.jpg; do
+                BASE=$(basename "$IMG" _small.jpg)
+                cp "$IMG" "$SLUG-canvas-$BASE.jpg"
+                ARGS+=("$SLUG-canvas-$BASE.jpg")
+              done
+            fi
           done
           gh "${ARGS[@]}"

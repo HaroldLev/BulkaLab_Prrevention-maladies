@@ -2,74 +2,75 @@
   "slug": "rhume-short",
   "title": "Le rhume en 60 secondes",
   "lang": "fr",
+  "music": { "name": "trend-pop-dynamique-2026-11", "bpm": 100 },
   "scenes": [
     {
-      "id": "hook", "dur": 6, "img": "s1", "accent": "#67e8f9",
+      "id": "hook", "dur": 6.0, "img": "s1", "accent": "#67e8f9",
       "tag": "MALADIE EN SHORT · 60 SECONDES", "title": "LE RHUME",
       "lines": [
         { "t": 0.9, "text": "Pourquoi attrapes-tu un rhume jusqu'à 4 fois par an ?" },
-        { "t": 3.2, "text": "En 60 secondes, tu vas tout comprendre.", "w": true }
+        { "t": 3.3, "text": "En 60 secondes, tu vas tout comprendre.", "w": true }
       ],
       "nar": "Pourquoi attrapes-tu un rhume jusqu'à quatre fois par an ? En soixante secondes, tu vas tout comprendre."
     },
     {
-      "id": "s2", "dur": 10, "img": "s2", "accent": "#f9a8d4",
+      "id": "s2", "dur": 9.6, "img": "s2", "accent": "#f9a8d4",
       "tag": "C'EST QUOI ?", "title": "UNE HISTOIRE DE VIRUS",
       "lines": [
-        { "t": 0.8, "text": "Une infection virale du nez et de la gorge" },
+        { "t": 0.9, "text": "Une infection virale du nez et de la gorge" },
         { "t": 3.0, "text": "Le rhinovirus en est le chef d'orchestre", "w": true },
-        { "t": 5.6, "text": "Ton nez produit du mucus pour se défendre :" },
-        { "t": 7.6, "text": "c'est son bouclier contre l'intrus." }
+        { "t": 5.7, "text": "Ton nez produit du mucus pour se défendre :" },
+        { "t": 7.5, "text": "c'est son bouclier contre l'intrus." }
       ],
       "nar": "Le rhume, c'est une infection virale du nez et de la gorge. Son chef d'orchestre, c'est le rhinovirus. Ton nez fabrique du mucus pour se défendre : c'est son petit bouclier contre l'intrus."
     },
     {
-      "id": "s3", "dur": 10, "img": "s3", "accent": "#a5b4fc",
+      "id": "s3", "dur": 9.6, "img": "s3", "accent": "#a5b4fc",
       "tag": "QUI EST CONCERNÉ ?", "title": "TOUT LE MONDE",
       "lines": [
-        { "t": 0.8, "text": "Jusqu'à 4 rhumes par an chez l'adulte", "w": true },
-        { "t": 3.2, "text": "5 millions de cas par an chez les moins de 7 ans", "w": true },
+        { "t": 0.9, "text": "Jusqu'à 4 rhumes par an chez l'adulte", "w": true },
+        { "t": 3.3, "text": "5 millions de cas par an chez les moins de 7 ans", "w": true },
         { "t": 6.0, "text": "Le virus voyage par les gouttelettes et les mains" }
       ],
       "nar": "Tout le monde ! Jusqu'à quatre rhumes par an chez l'adulte, et cinq millions de cas par an en France chez les moins de sept ans. Le virus voyage dans les gouttelettes de la toux et par les mains."
     },
     {
-      "id": "s4", "dur": 10, "img": "s4", "accent": "#fbbf24",
+      "id": "s4", "dur": 9.6, "img": "s4", "accent": "#fbbf24",
       "tag": "LES SYMPTÔMES", "title": "LES SIGNES",
       "lines": [
-        { "t": 0.8, "text": "Éternuements, nez qui coule ou bouché" },
+        { "t": 0.9, "text": "Éternuements, nez qui coule ou bouché" },
         { "t": 3.0, "text": "Maux de gorge, fatigue, toux, parfois fièvre" },
-        { "t": 5.8, "text": "Ça guérit tout seul en 5 à 20 jours", "w": true }
+        { "t": 5.7, "text": "Ça guérit tout seul en 5 à 20 jours", "w": true }
       ],
       "nar": "Les signes : éternuements, nez qui coule ou bouché, mal de gorge, fatigue, toux, parfois un peu de fièvre. Bonne nouvelle : ça guérit tout seul, en général en une à deux semaines."
     },
     {
-      "id": "s5", "dur": 11, "img": "s4", "accent": "#34d399",
+      "id": "s5", "dur": 10.2, "img": "s4", "accent": "#34d399",
       "tag": "SE SOIGNER", "title": "PAS DE PANIQUE",
       "lines": [
-        { "t": 0.8, "text": "Un virus : les antibiotiques sont inutiles", "w": true },
-        { "t": 3.4, "text": "Repos, boire de l'eau, laver son nez au sérum physiologique" },
-        { "t": 6.4, "text": "Paracétamol si fièvre ou douleurs" },
+        { "t": 0.9, "text": "Un virus : les antibiotiques sont inutiles", "w": true },
+        { "t": 3.3, "text": "Repos, boire de l'eau, laver son nez au sérum physiologique" },
+        { "t": 6.3, "text": "Paracétamol si fièvre ou douleurs" },
         { "t": 8.4, "text": "Consulte si ça dure ou si la fièvre monte" }
       ],
       "nar": "C'est un virus, donc les antibiotiques ne servent à rien. Repos, boire de l'eau, laver son nez au sérum physiologique, et du paracétamol si besoin. Consulte un médecin si les symptômes durent ou si la fièvre monte."
     },
     {
-      "id": "s6", "dur": 10, "img": "s5", "accent": "#fda4af",
+      "id": "s6", "dur": 9.6, "img": "s5", "accent": "#fda4af",
       "tag": "LIMITER LA CONTAGION", "title": "LES BONS GESTES",
       "lines": [
-        { "t": 0.8, "text": "Lave-toi les mains, plusieurs fois par jour", "w": true },
-        { "t": 3.2, "text": "Aère ta chambre, ne surchauffe pas (20 °C max)" },
+        { "t": 0.9, "text": "Lave-toi les mains, plusieurs fois par jour", "w": true },
+        { "t": 3.3, "text": "Aère ta chambre, ne surchauffe pas (20 °C max)" },
         { "t": 6.0, "text": "Évite le tabac et les contacts rapprochés" }
       ],
       "nar": "Pour limiter la contagion : lave-toi les mains plusieurs fois par jour, aère ta chambre sans la surchauffer, et évite le tabac ainsi que les contacts trop rapprochés avec les personnes malades."
     },
     {
-      "id": "hope", "dur": 9, "img": "s1", "accent": "#fcd34d",
+      "id": "hope", "dur": 8.4, "img": "s1", "accent": "#fcd34d",
       "tag": "L'ESSENTIEL", "title": "ÇA PASSE !",
       "lines": [
         { "t": 0.9, "text": "Bénin, fréquent, et ça guérit seul", "w": true },
-        { "t": 3.2, "text": "Partage pour informer autour de toi ♥" },
+        { "t": 3.3, "text": "Partage pour informer autour de toi ♥" },
         { "t": 5.4, "text": "Follow pour comprendre d'autres maladies" }
       ],
       "nar": "Voilà : le rhume est bénin, très fréquent, et il guérit tout seul. Partage cette vidéo pour informer autour de toi, et abonne-toi pour comprendre d'autres maladies."
