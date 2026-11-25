@@ -1,0 +1,77 @@
+name: Export MP4
+
+on:
+  push:
+    paths:
+      - 'storyboards/**'
+      - 'generate.py'
+      - 'assets/**'
+      - '.github/workflows/export.yml'
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: 'Slug du storyboard à exporter (vide = tous)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dépendances
+        run: pip install pillow
+
+      - name: Génération frames + audio
+        run: |
+          mkdir -p out
+          SLUG="${{ github.event.inputs.slug }}"
+          if [ -z "$SLUG" ]; then
+            LIST=$(ls storyboards/*.json)
+          else
+            LIST="storyboards/$SLUG.json"
+          fi
+          for SB in $LIST; do
+            SLUG_JSON=$(basename "$SB" .json)
+            mkdir -p "out/$SLUG_JSON"
+            python generate.py --storyboard "$SB" --out "out/$SLUG_JSON"
+            echo "SLUGS<<EOF" >> "$GITHUB_ENV"
+            echo "$SLUG_JSON" >> "$GITHUB_ENV"
+            echo "EOF" >> "$GITHUB_ENV"
+          done
+
+      - name: Assemblage MP4
+        env:
+          SLUGS: ${{ env.SLUGS }}
+        run: |
+          which ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+          for SLUG in $SLUGS; do
+            FPS=$(python -c "import json;print(json.load(open('out/$SLUG/meta.json'))['fps'])")
+            ffmpeg -y -loglevel error -framerate $FPS -i "out/$SLUG/frames/frame_%05d.jpg" -i "out/$SLUG/audio.wav" \
+              -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p \
+              -c:a aac -b:a 160k -shortest -movflags +faststart \
+              "out/$SLUG.mp4"
+            ls -la "out/$SLUG.mp4"
+          done
+
+      - name: Publication en release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLUGS: ${{ env.SLUGS }}
+        run: |
+          TAG="export-$(date +%Y%m%d-%H%M%S)"
+          ARGS=(release create "$TAG" --title "Export $TAG" --notes "Export MP4 automatique")
+          for SLUG in $SLUGS; do
+            cp "out/$SLUG.mp4" "$SLUG.mp4"
+            ARGS+=("$SLUG.mp4")
+          done
+          gh "${ARGS[@]}"
