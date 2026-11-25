@@ -37,14 +37,14 @@ jobs:
           else
             LIST="storyboards/$SLUG.json"
           fi
+          SLUGS_ALL=""
           for SB in $LIST; do
             SLUG_JSON=$(basename "$SB" .json)
             mkdir -p "out/$SLUG_JSON"
             python generate.py --storyboard "$SB" --out "out/$SLUG_JSON"
-            echo "SLUGS<<EOF" >> "$GITHUB_ENV"
-            echo "$SLUG_JSON" >> "$GITHUB_ENV"
-            echo "EOF" >> "$GITHUB_ENV"
+            SLUGS_ALL="$SLUGS_ALL $SLUG_JSON"
           done
+          echo "SLUGS=$SLUGS_ALL" >> "$GITHUB_ENV"
 
       - name: Assemblage MP4
         env:
