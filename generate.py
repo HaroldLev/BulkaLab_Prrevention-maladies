@@ -208,7 +208,9 @@ class FrameRenderer:
                     quality=88, optimize=True)
 
 # ---------------- audio (miroir du moteur Web Audio lo-fi) ----------------
-def synth_audio(total, out_path):
+def synth_audio(total, out_path, music=None):
+    # Profil musical lu depuis le storyboard : {'name': ..., 'bpm': ...}
+    # (règle « Musique & trends » : tempo accrocheur, collé aux trends du moment).
     N = int(round(total * SR))
     out = [0.0] * N
     NOTE_N = 4096
@@ -220,10 +222,11 @@ def synth_audio(total, out_path):
         # triangle
         return [8 / math.pi * math.pi / 2 * 0 + (2 / math.pi) * math.asin(math.sin(2 * math.pi * j / n)) for j in range(n)]
 
-    BPM = 72
+    music = music or {}
+    BPM = float(music.get('bpm', 100))
     BEAT = 60.0 / BPM
     BAR = 4 * BEAT
-    bars = 24
+    bars = int(total / BAR) + 2   # couvre toute la durée, marge de 2 mesures
     t0 = 0.08
 
     def env_exp(n, a, peak, end):
@@ -291,9 +294,12 @@ def synth_audio(total, out_path):
                 ph += 2 * math.pi * f / SR
                 g = 0.34 * (u / 0.012 if u < 0.012 else math.exp(-6.9 * (u - 0.012) / 0.988))
                 bw[i0 + j] += g * math.sin(ph)
-        # hat : 4 croches
-        for h in range(4):
-            i0 = int(BEAT * (h + 0.5) * SR)
+        # hat : 4 contretemps (sujet calme) ou 8 croches par mesure
+        # (tempo trend > 84 BPM, miroir exact du template canvas)
+        hat_n = 8 if BPM > 84 else 4
+        hat_div = 2.0 if BPM > 84 else 1.0
+        for h in range(hat_n):
+            i0 = int(BEAT * (h + 0.5) / hat_div * SR)
             n_h = int(0.06 * SR)
             rnd = 12345 + q * 77 + h
             for j in range(min(n_h, bar_n - i0)):
@@ -371,10 +377,19 @@ def main():
             idx.append(int((r.starts[k] + min(2, s['dur'])) * r.fps))
         idx.append(int(r.total * r.fps) - 1)
         r.run(only_times=sorted(set(idx)))
-        synth_audio(min(6.0, r.total), os.path.join(args.out, 'audio_smoke.wav'))
+        synth_audio(min(6.0, r.total), os.path.join(args.out, 'audio_smoke.wav'), sb.get('music'))
     else:
         r.run()
-        synth_audio(r.total, os.path.join(args.out, 'audio.wav'))
+        synth_audio(r.total, os.path.join(args.out, 'audio.wav'), sb.get('music'))
+        # images allégées pour le canvas React (limite 1 024 000 octets, base64 inclus)
+        cdir = os.path.join(args.out, 'canvas-images')
+        os.makedirs(cdir, exist_ok=True)
+        for k, img in r.imgs.items():
+            w = 560
+            h = int(img.height * w / img.width)
+            img.resize((w, h), Image.LANCZOS).save(
+                os.path.join(cdir, k + '_small.jpg'),
+                quality=42, optimize=True)
     with open(os.path.join(args.out, 'meta.json'), 'w') as f:
         json.dump({'slug': sb['slug'], 'total': r.total, 'fps': args.fps}, f)
 
