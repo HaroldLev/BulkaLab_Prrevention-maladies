@@ -4,9 +4,6 @@ on:
   push:
     paths:
       - 'storyboards/**'
-      - 'generate.py'
-      - 'assets/**'
-      - '.github/workflows/export.yml'
   workflow_dispatch:
     inputs:
       slug:
@@ -20,7 +17,7 @@ permissions:
 jobs:
   export:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -56,10 +53,7 @@ jobs:
           which ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
           for SLUG in $SLUGS; do
             FPS=$(python -c "import json;print(json.load(open('out/$SLUG/meta.json'))['fps'])")
-            ffmpeg -y -loglevel error -framerate $FPS -i "out/$SLUG/frames/frame_%05d.jpg" -i "out/$SLUG/audio.wav" \
-              -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p \
-              -c:a aac -b:a 160k -shortest -movflags +faststart \
-              "out/$SLUG.mp4"
+            ffmpeg -y -loglevel error -framerate $FPS -i "out/$SLUG/frames/frame_%05d.jpg" -i "out/$SLUG/audio.wav"               -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p               -c:a aac -b:a 160k -shortest -movflags +faststart               "out/$SLUG.mp4"
             ls -la "out/$SLUG.mp4"
           done
 
@@ -82,4 +76,4 @@ jobs:
               done
             fi
           done
-          gh "${ARGS[@]}"
+          gh "${@}"
