@@ -15,13 +15,24 @@ def hex_rgb(h):
     h = h.lstrip('#')
     return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
 
-def load_image_b64(path):
-    with open(path) as f:
-        return Image.open(BytesIO(base64.b64decode(f.read()))).convert('RGB')
+def load_b64_split(prefix):
+    """Reconstitue un binaire découpé en `.partNNN.b64` (< 64 Ko par morceau,
+    limite des push de fichiers via l'API GitHub)."""
+    import glob as _glob
+    parts = sorted(_glob.glob(prefix + '.part*.b64'))
+    if not parts:
+        raise FileNotFoundError('aucune partie pour ' + prefix)
+    chunks = []
+    for p in parts:
+        with open(p) as f:
+            chunks.append(f.read().strip())
+    return base64.b64decode(''.join(chunks))
 
-def load_font_b64_cache(path):
-    with open(path) as f:
-        return base64.b64decode(f.read())
+def load_image_b64(prefix):
+    return Image.open(BytesIO(load_b64_split(prefix))).convert('RGB')
+
+def load_font_b64_cache(prefix):
+    return load_b64_split(prefix)
 
 def ease_out(p):
     p = min(max(p, 0.0), 1.0)
@@ -42,11 +53,11 @@ class FrameRenderer:
             acc += s['dur']
         self.total = acc
         # assets
-        self.imgs = {k: load_image_b64(os.path.join('assets', 'images', k + '.jpg.b64'))
+        self.imgs = {k: load_image_b64(os.path.join('assets', 'images', k + '.jpg'))
                      for k in {sc['img'] for sc in self.scenes}}
         fontdir = os.path.join('assets', 'fonts')
-        bold_bytes = load_font_b64_cache(os.path.join(fontdir, 'Archivo-Bold.ttf.b64'))
-        reg_bytes = load_font_b64_cache(os.path.join(fontdir, 'Archivo-Regular.ttf.b64'))
+        bold_bytes = load_font_b64_cache(os.path.join(fontdir, 'Archivo-Bold.ttf'))
+        reg_bytes = load_font_b64_cache(os.path.join(fontdir, 'Archivo-Regular.ttf'))
         from PIL import ImageFont
         self.f_title = ImageFont.truetype(BytesIO(bold_bytes), 74)
         self.f_cap = ImageFont.truetype(BytesIO(reg_bytes), 47)
