@@ -2,6 +2,7 @@
   "slug": "rhume-narration-short",
   "title": "Le rhume expliqué par une infirmière",
   "lang": "fr",
+  "voice": "fr_FR-siwis-medium",
   "revision": 2,
   "music": { "name": "narration-douce-2026-11", "bpm": 90 },
   "narDefault": true,

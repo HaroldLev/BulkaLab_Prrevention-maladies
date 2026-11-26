@@ -26,7 +26,7 @@ jobs:
           python-version: '3.12'
 
       - name: Dépendances
-        run: pip install pillow
+        run: pip install pillow piper-tts
 
       - name: Génération frames + audio
         run: |
@@ -46,6 +46,14 @@ jobs:
           done
           echo "SLUGS=$SLUGS_ALL" >> "$GITHUB_ENV"
 
+      - name: Voix narrée (Piper TTS)
+        env:
+          SLUGS: ${{ env.SLUGS }}
+        run: |
+          for SLUG in $SLUGS; do
+            python tts_narration.py --storyboard "storyboards/$SLUG.json" --out "out/$SLUG" || echo "pas de narration pour $SLUG"
+          done
+
       - name: Assemblage MP4
         env:
           SLUGS: ${{ env.SLUGS }}
@@ -53,7 +61,20 @@ jobs:
           which ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
           for SLUG in $SLUGS; do
             FPS=$(python -c "import json;print(json.load(open('out/$SLUG/meta.json'))['fps'])")
-            ffmpeg -y -loglevel error -framerate $FPS -i "out/$SLUG/frames/frame_%05d.jpg" -i "out/$SLUG/audio.wav"               -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p               -c:a aac -b:a 160k -shortest -movflags +faststart               "out/$SLUG.mp4"
+            NAR="out/$SLUG/narration.wav"
+            if [ -f "$NAR" ]; then
+              ffmpeg -y -loglevel error -framerate $FPS -i "out/$SLUG/frames/frame_%05d.jpg" -i "out/$SLUG/audio.wav" -i "$NAR" \
+                -filter_complex "[1:a]volume=0.30[m];[2:a]volume=1.35[v];[m][v]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95,aresample=44100[aout]" \
+                -map 0:v -map "[aout]" \
+                -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p \
+                -c:a aac -b:a 160k -movflags +faststart \
+                "out/$SLUG.mp4"
+            else
+              ffmpeg -y -loglevel error -framerate $FPS -i "out/$SLUG/frames/frame_%05d.jpg" -i "out/$SLUG/audio.wav" \
+                -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p \
+                -c:a aac -b:a 160k -shortest -movflags +faststart \
+                "out/$SLUG.mp4"
+            fi
             ls -la "out/$SLUG.mp4"
           done
 
