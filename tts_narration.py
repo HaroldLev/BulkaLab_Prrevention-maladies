@@ -7,27 +7,74 @@ est synthétisé au début de sa scène, puis complété par du silence jusqu'à
 fin de la scène (scène suivante jamais décalée).
 
 Le storyboard doit contenir "voice": "<id de voix piper>" (ex. fr_FR-siwis-medium).
-Si "voice" est absent, le script ne fait rien (fallback musique seule).
+Si "voice" est absent, le script ne fait rien et sort 0 (MP4 musique seule).
+En cas d'échec de synthèse, le script sort NON-ZÉRO pour faire échouer le job
+(jamais de MP4 sans voix livré en silence).
 """
 import argparse
+import glob
 import json
 import os
+import subprocess
 import sys
 import wave
 
 
-def synth_scene(voice_id, text, out_wav):
-    """Synthétise un texte avec la CLI piper (lecture depuis stdin)."""
-    import subprocess
+def find_model(voice_id):
+    """Cherche le .onnx d'une voix, localement ou après téléchargement."""
+    for pat in (voice_id + ".onnx", "**/" + voice_id + ".onnx"):
+        hits = glob.glob(pat, recursive=True)
+        if hits:
+            return hits[0]
+    return None
+
+
+def ensure_voice(voice_id, workdir):
+    """Télécharge la voix si besoin (piper ne télé charge PAS via -m id)."""
+    model = find_model(voice_id)
+    if model:
+        return model
     p = subprocess.run(
-        ["piper", "-m", voice_id, "-f", out_wav],
-        input=(text.strip() + "\n").encode("utf-8"),
+        [sys.executable, "-m", "piper.download_voices", voice_id],
+        cwd=workdir,
         capture_output=True,
     )
-    ok = p.returncode == 0 and os.path.exists(out_wav) and os.path.getsize(out_wav) > 44
-    if not ok:
-        sys.stderr.write((p.stderr or b"?").decode("utf-8", "replace")[:500] + "\n")
-    return ok
+    sys.stderr.write("download_voices rc=%d\n%s\n%s\n" % (
+        p.returncode,
+        (p.stdout or b"")[:800].decode("utf-8", "replace"),
+        (p.stderr or b"")[:800].decode("utf-8", "replace"),
+    ))
+    return find_model(voice_id)
+
+
+def synth_scene(model_path, text, out_wav):
+    """Synthétise un texte : CLI piper d'abord, API python en secours."""
+    try:
+        p = subprocess.run(
+            ["piper", "-m", model_path, "-f", out_wav],
+            input=(text.strip() + "\n").encode("utf-8"),
+            capture_output=True,
+            timeout=120,
+        )
+        if p.returncode == 0 and os.path.exists(out_wav) and os.path.getsize(out_wav) > 44:
+            return True
+        sys.stderr.write("CLI piper rc=%d : %s\n" % (
+            p.returncode, (p.stderr or b"")[:500].decode("utf-8", "replace")))
+    except Exception as e:  # noqa: BLE001
+        sys.stderr.write("CLI piper exception: %r\n" % e)
+    # secours : API python (synthétise selon la version de piper)
+    try:
+        from piper import PiperVoice
+        voice = PiperVoice.load(model_path)
+        with wave.open(out_wav, "wb") as w:
+            try:
+                voice.synthesize(text.strip(), w)
+            except (AttributeError, TypeError):
+                voice.synthesize_wav(text.strip(), w)
+        return os.path.getsize(out_wav) > 44
+    except Exception as e:  # noqa: BLE001
+        sys.stderr.write("API piper exception: %r\n" % e)
+        return False
 
 
 def main():
@@ -44,23 +91,28 @@ def main():
         return 0
 
     os.makedirs(args.out, exist_ok=True)
+    model = ensure_voice(voice_id, os.getcwd())
+    if not model:
+        sys.stderr.write("voix introuvable après téléchargement : %s\n" % voice_id)
+        return 2
 
-    # 1. synthèse de chaque scène
     seg_map = {}
+    errors = 0
     for j, sc in enumerate(sb.get("scenes", [])):
         txt = (sc.get("nar") or "").strip()
         if not txt:
             continue
         tmp = os.path.join(args.out, "seg_%02d.wav" % j)
-        if synth_scene(voice_id, txt, tmp):
+        if synth_scene(model, txt, tmp):
             seg_map[j] = tmp
         else:
-            print("échec synthèse scène %d (silence à la place)" % j)
+            sys.stderr.write("échec synthèse scène %d\n" % j)
+            errors += 1
     if not seg_map:
-        print("aucune narration générée pour", sb.get("slug"))
-        return 1
+        return 3
+    if errors:
+        print("ATTENTION : %d scène(s) sans voix" % errors)
 
-    # 2. assemblage au timing des scènes (format piper : mono, 16 bits)
     with wave.open(seg_map[min(seg_map)], "rb") as w0:
         ch, sw, sr = w0.getnchannels(), w0.getsampwidth(), w0.getframerate()
     out_path = os.path.join(args.out, "narration.wav")
@@ -69,28 +121,15 @@ def main():
         wo.setsampwidth(sw)
         wo.setframerate(sr)
         for j, sc in enumerate(sb.get("scenes", [])):
-            target = int(round(float(sc["dur"]) * sr))  # frames pour la durée de la scène
+            target = int(round(float(sc["dur"]) * sr))
             written = 0
             if j in seg_map:
                 with wave.open(seg_map[j], "rb") as w:
-                    jch, jsw = w.getnchannels(), w.getsampwidth()
                     raw = w.readframes(target)
-                    n = len(raw) // (jch * jsw)
-                    # piper produit du mono 16 bits : conversion simple si besoin
-                    if jch == ch and jsw == sw:
-                        wo.writeframes(raw)
-                        written = min(target, n)
-                    else:
-                        # rééchantillonnage naïf par troncature de canaux (rare)
-                        step = jch * jsw
-                        trimmed = b"".join(
-                            raw[i * step: i * step + sw] for i in range(min(n, target))
-                        )
-                        wo.writeframes(trimmed)
-                        written = min(target, len(trimmed) // (ch * sw))
+                    wo.writeframes(raw)
+                    written = min(target, len(raw) // (w.getnchannels() * w.getsampwidth()))
             if written < target:
                 wo.writeframes(b"\x00" * ((target - written) * ch * sw))
-            # nettoyage du segment
             if j in seg_map:
                 try:
                     os.remove(seg_map[j])
@@ -98,7 +137,8 @@ def main():
                     pass
 
     total = sum(float(sc["dur"]) for sc in sb.get("scenes", []))
-    print("narration.wav : %.1f s, %d octets, voix %s" % (total, os.path.getsize(out_path), voice_id))
+    print("narration.wav : %.1f s, %d octets, voix %s (%s)" % (
+        total, os.path.getsize(out_path), voice_id, model))
     return 0
 
 

@@ -51,7 +51,8 @@ jobs:
           SLUGS: ${{ env.SLUGS }}
         run: |
           for SLUG in $SLUGS; do
-            python tts_narration.py --storyboard "storyboards/$SLUG.json" --out "out/$SLUG" || echo "pas de narration pour $SLUG"
+            # sans champ voice -> exit 0 (musique seule) ; avec voice -> tout échec est FATAL
+            python tts_narration.py --storyboard "storyboards/$SLUG.json" --out "out/$SLUG"
           done
 
       - name: Assemblage MP4
