@@ -7,6 +7,8 @@ est synthétisé au début de sa scène, puis complété par du silence jusqu'à
 fin de la scène (scène suivante jamais décalée).
 
 Le storyboard doit contenir "voice": "<id de voix piper>" (ex. fr_FR-siwis-medium).
+Champ optionnel "voice_speed" (float) : length-scale Piper — < 1.0 accélère la
+voix (ex. 0.85 ≈ 15 % plus rapide), > 1.0 la ralentit. Défaut : vitesse native.
 Si "voice" est absent, le script ne fait rien et sort 0 (MP4 musique seule).
 En cas d'échec de synthèse, le script sort NON-ZÉRO pour faire échouer le job
 (jamais de MP4 sans voix livré en silence).
@@ -47,11 +49,14 @@ def ensure_voice(voice_id, workdir):
     return find_model(voice_id)
 
 
-def synth_scene(model_path, text, out_wav):
+def synth_scene(model_path, text, out_wav, length_scale=None):
     """Synthétise un texte : CLI piper d'abord, API python en secours."""
+    cmd = ["piper", "-m", model_path, "-f", out_wav]
+    if length_scale is not None:
+        cmd += ["--length-scale", str(float(length_scale))]
     try:
         p = subprocess.run(
-            ["piper", "-m", model_path, "-f", out_wav],
+            cmd,
             input=(text.strip() + "\n").encode("utf-8"),
             capture_output=True,
             timeout=120,
@@ -62,10 +67,15 @@ def synth_scene(model_path, text, out_wav):
             p.returncode, (p.stderr or b"")[:500].decode("utf-8", "replace")))
     except Exception as e:  # noqa: BLE001
         sys.stderr.write("CLI piper exception: %r\n" % e)
-    # secours : API python (synthétise selon la version de piper)
+    # secours : API python (synthétise selon la version de piper ; sans réglage
+    # de vitesse, l'option length-scale n'est pas uniforme entre versions)
     try:
         from piper import PiperVoice
-        voice = PiperVoice.load(model_path)
+        try:
+            from piper import PiperConfig as _Cfg
+            voice = PiperVoice.load(model_path, config=_Cfg(length_scale=float(length_scale)))
+        except Exception:
+            voice = PiperVoice.load(model_path)
         with wave.open(out_wav, "wb") as w:
             try:
                 voice.synthesize(text.strip(), w)
@@ -89,6 +99,7 @@ def main():
     if not voice_id:
         print("pas de champ voice -> pas de narration pour", sb.get("slug"))
         return 0
+    length_scale = sb.get("voice_speed")
 
     os.makedirs(args.out, exist_ok=True)
     model = ensure_voice(voice_id, os.getcwd())
@@ -103,7 +114,7 @@ def main():
         if not txt:
             continue
         tmp = os.path.join(args.out, "seg_%02d.wav" % j)
-        if synth_scene(model, txt, tmp):
+        if synth_scene(model, txt, tmp, length_scale):
             seg_map[j] = tmp
         else:
             sys.stderr.write("échec synthèse scène %d\n" % j)
@@ -137,8 +148,8 @@ def main():
                     pass
 
     total = sum(float(sc["dur"]) for sc in sb.get("scenes", []))
-    print("narration.wav : %.1f s, %d octets, voix %s (%s)" % (
-        total, os.path.getsize(out_path), voice_id, model))
+    print("narration.wav : %.1f s, %d octets, voix %s (vitesse %s, %s)" % (
+        total, os.path.getsize(out_path), voice_id, length_scale or "native", model))
     return 0
 
 
